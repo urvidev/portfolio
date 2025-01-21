@@ -1,0 +1,100 @@
+enum UserStatus {
+    INVITED
+    VERIFIED
+}
+
+model User {
+    id                String             @id @default(uuid())
+    name              String?
+    email             String?            @unique
+    pictureUrl        String?            @default('https://i.imgur.com/ZdJSK3Y.jpeg')
+    tokenInvitation   String?
+
+    status            UserStatus         @default(VERIFIED)
+
+    // this is the role of the user for the application
+    globalRole        String             @default('USER')
+    password          String?            @password @omit
+    createdAt         DateTime           @default(now())
+    updatedAt         DateTime           @updatedAt @default(now())
+
+    blogPosts         BlogPost[]         @relation("user")
+    comments          Comment[]          @relation("user")
+    portfolioProjects PortfolioProject[] @relation("user")
+    experiences       Experience[]       @relation("user")
+
+    @@auth()
+    @@allow("all", auth().id == this.id)
+    @@allow('all', auth().globalRole == 'ADMIN')
+
+    //we only allow that user to register if they don't create an admin role
+    @@allow("create", globalRole != 'ADMIN')
+    @@allow("read", true)
+}
+
+model BlogPost {
+
+    id        String    @id @default(uuid())
+    title     String?
+    content   String?
+    status    String?
+    slug      String?
+
+    userId    String?
+    user      User?     @relation(fields: [userId], references: [id], name: "user")
+
+    comments  Comment[] @relation("blogPost")
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Comment {
+
+    id         String    @id @default(uuid())
+    content    String?
+    status     String?
+
+    blogPostId String?
+    blogPost   BlogPost? @relation(fields: [blogPostId], references: [id], name: "blogPost")
+    userId     String?
+    user       User?     @relation(fields: [userId], references: [id], name: "user")
+
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model PortfolioProject {
+
+    id          String   @id @default(uuid())
+    title       String?
+    description String?
+    imageUrl    String?
+    projectUrl  String?
+
+    userId      String?
+    user        User?    @relation(fields: [userId], references: [id], name: "user")
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
+model Experience {
+
+    id          String   @id @default(uuid())
+    title       String?
+    company     String?
+    description String?
+    startDate   String?
+    endDate     String?
+
+    userId      String?
+    user        User?    @relation(fields: [userId], references: [id], name: "user")
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt @default(now())
+    @@allow("all", true)
+}
+
