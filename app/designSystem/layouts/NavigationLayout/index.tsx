@@ -5,6 +5,7 @@ import { Leftbar } from './components/Leftbar'
 import { Mobilebar } from './components/Mobilebar'
 import { Topbar } from './components/Topbar'
 import { NavigationItem } from './types'
+import { useUserContext } from '@/core/context'
 
 interface Props {
   children: ReactNode
@@ -14,51 +15,65 @@ export const NavigationLayout: React.FC<Props> = ({ children }) => {
   const router = useNavigate()
   const pathname = useLocation().pathname
   const params: Record<string, string> = useParams()
+  const { checkRole } = useUserContext()
 
   const goTo = (url: string) => {
     router(url)
   }
+
+  const adminItems: NavigationItem[] = [
+    {
+      key: '/admin/dashboard',
+      label: 'Admin Dashboard',
+      position: 'topbar',
+      onClick: () => goTo('/admin/dashboard'),
+    },
+    {
+      key: '/admin/content',
+      label: 'Content Management',
+      position: 'topbar',
+      onClick: () => goTo('/admin/content'),
+    },
+    {
+      key: '/admin/comments',
+      label: 'Comment Management',
+      position: 'topbar',
+      onClick: () => goTo('/admin/comments'),
+    },
+  ]
 
   const items: NavigationItem[] = [
     {
       key: '/home',
       label: 'Home Page',
       position: 'topbar',
-
       onClick: () => goTo('/home'),
     },
-
     {
       key: '/blog',
       label: 'Blog Page',
       position: 'topbar',
-
       onClick: () => goTo('/blog'),
     },
-
     {
-      key: '/admin/dashboard',
-      label: 'Admin Dashboard',
+      key: '/contact',
+      label: 'Contact',
       position: 'topbar',
-
-      onClick: () => goTo('/admin/dashboard'),
+      onClick: () => goTo('/contact'),
     },
-
     {
-      key: '/admin/content',
-      label: 'Content Management',
+      key: '/projects',
+      label: 'Projects',
       position: 'topbar',
-
-      onClick: () => goTo('/admin/content'),
+      onClick: () => goTo('/projects'),
     },
-
     {
-      key: '/admin/comments',
-      label: 'Comment Management',
+      key: '/experience',
+      label: 'Experience',
       position: 'topbar',
-
-      onClick: () => goTo('/admin/comments'),
+      onClick: () => goTo('/experience'),
     },
+    ...(checkRole('ADMIN') ? adminItems : []),
   ]
 
   const itemsVisible = items

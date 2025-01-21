@@ -7,7 +7,9 @@ import {
   Modal,
   Table,
   message,
+  Upload,
 } from 'antd'
+import { Editor } from '@tinymce/tinymce-react'
 import { useState } from 'react'
 const { Title, Text } = Typography
 import { useUserContext } from '@/core/context'
@@ -20,6 +22,7 @@ import { PageLayout } from '@/designSystem'
 export default function ContentManagementPage() {
   const { user, checkRole } = useUserContext()
   const [activeTab, setActiveTab] = useState('1')
+  const [editorContent, setEditorContent] = useState('')
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [form] = Form.useForm()
@@ -199,15 +202,17 @@ export default function ContentManagementPage() {
             </Button>
           }
         >
-          <Tabs.TabPane tab="Social Items" key="1">
-            <Table columns={columns.items} dataSource={items} rowKey="id" />
+          <Tabs.TabPane tab="Blog Posts" key="1">
+            <Table columns={columns.blogPosts} dataSource={items} rowKey="id" />
           </Tabs.TabPane>
-          <Tabs.TabPane tab="Comments" key="2">
-            <Table
-              columns={columns.comments}
-              dataSource={comments}
-              rowKey="id"
-            />
+          <Tabs.TabPane tab="Projects" key="2">
+            <Table columns={columns.projects} dataSource={projects} rowKey="id" />
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="Experience" key="3">
+            <Table columns={columns.experience} dataSource={experiences} rowKey="id" />
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="Comments" key="4">
+            <Table columns={columns.comments} dataSource={comments} rowKey="id" />
           </Tabs.TabPane>
         </Tabs>
 
@@ -220,14 +225,48 @@ export default function ContentManagementPage() {
           onOk={() => form.submit()}
         >
           <Form form={form} onFinish={handleSubmit} layout="vertical">
+            <Form.Item name="title" label="Title" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            
+            <Form.Item name="content" label="Content" rules={[{ required: true }]}>
+              <Editor
+                value={editorContent}
+                onEditorChange={(content) => setEditorContent(content)}
+                init={{
+                  height: 400,
+                  menubar: true,
+                  plugins: ['link', 'image', 'lists', 'table', 'code'],
+                  toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist outdent indent | link image'
+                }}
+              />
+            </Form.Item>
+
             {activeTab === '2' && (
-              <Form.Item
-                name="content"
-                label="Content"
-                rules={[{ required: true }]}
-              >
-                <Input.TextArea rows={4} />
-              </Form.Item>
+              <>
+                <Form.Item name="projectUrl" label="Project URL">
+                  <Input />
+                </Form.Item>
+                <Form.Item name="imageUrl" label="Project Image">
+                  <Upload.Dragger maxCount={1} listType="picture">
+                    <p>Click or drag image to upload</p>
+                  </Upload.Dragger>
+                </Form.Item>
+              </>
+            )}
+
+            {activeTab === '3' && (
+              <>
+                <Form.Item name="company" label="Company" rules={[{ required: true }]}>
+                  <Input />
+                </Form.Item>
+                <Form.Item name="startDate" label="Start Date" rules={[{ required: true }]}>
+                  <Input type="date" />
+                </Form.Item>
+                <Form.Item name="endDate" label="End Date">
+                  <Input type="date" />
+                </Form.Item>
+              </>
             )}
           </Form>
         </Modal>

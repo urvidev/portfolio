@@ -1,7 +1,7 @@
-import { Typography, Table, Space, Button, Modal, Input, message } from 'antd'
+import { Typography, Table, Space, Button, Modal, Input, message, Select, Dropdown } from 'antd'
 import { useState } from 'react'
 const { Title, Text } = Typography
-const { TextArea } = Input
+const { TextArea, Search } = Input
 import { useUserContext } from '@/core/context'
 import dayjs from 'dayjs'
 import { useLocation, useNavigate, useParams } from '@remix-run/react'
@@ -15,6 +15,11 @@ export default function CommentManagementPage() {
   const [replyModalVisible, setReplyModalVisible] = useState(false)
   const [replyContent, setReplyContent] = useState('')
   const [selectedComment, setSelectedComment] = useState<any>(null)
+  const [selectedComments, setSelectedComments] = useState<string[]>([])
+  const [searchText, setSearchText] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [sortField, setSortField] = useState('createdAt')
+  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend'>('descend')
 
   // Fetch all comments with user and item information
   const { data: comments, refetch } =
@@ -23,13 +28,15 @@ export default function CommentManagementPage() {
         user: true,
         item: true,
       },
+      orderBy: {
+        [sortField]: sortOrder === 'ascend' ? 'asc' : 'desc'
+      }
     })
 
   // Mutations
-  const { mutateAsync: deleteComment } =
-    Api.socialNetworkComment.delete.useMutation()
-  const { mutateAsync: createComment } =
-    Api.socialNetworkComment.create.useMutation()
+  const { mutateAsync: deleteComment } = Api.socialNetworkComment.delete.useMutation()
+  const { mutateAsync: createComment } = Api.socialNetworkComment.create.useMutation()
+  const { mutateAsync: updateComment } = Api.socialNetworkComment.update.useMutation()
 
   if (!checkRole('ADMIN')) {
     return (
@@ -78,7 +85,59 @@ export default function CommentManagementPage() {
     }
   }
 
+  const handleBulkAction = async (action: string) => {
+    try {
+      switch (action) {
+        case 'delete':
+          await Promise.all(selectedComments.map(id => deleteComment({ where: { id } })))
+          message.success('Comments deleted successfully')
+          break
+        case 'approve':
+          await Promise.all(selectedComments.map(id => 
+            updateComment({ where: { id }, data: { status: 'APPROVED' } })
+          ))
+          message.success('Comments approved successfully')
+          break
+        case 'reject':
+          await Promise.all(selectedComments.map(id => 
+            updateComment({ where: { id }, data: { status: 'REJECTED' } })
+          ))
+          message.success('Comments rejected successfully')
+          break
+      }
+      setSelectedComments([])
+      refetch()
+    } catch (error) {
+      message.error('Failed to perform bulk action')
+    }
+  }
+
+  const filteredComments = comments?.filter(comment => {
+    const matchesSearch = comment.content?.toLowerCase().includes(searchText.toLowerCase()) ||
+      comment.user?.name?.toLowerCase().includes(searchText.toLowerCase())
+    const matchesStatus = filterStatus === 'all' || comment.status === filterStatus
+    return matchesSearch && matchesStatus
+  })
+
   const columns = [
+    {
+      title: 'Select',
+      dataIndex: 'select',
+      key: 'select',
+      render: (_: any, record: any) => (
+        <input
+          type="checkbox"
+          checked={selectedComments.includes(record.id)}
+          onChange={e => {
+            if (e.target.checked) {
+              setSelectedComments([...selectedComments, record.id])
+            } else {
+              setSelectedComments(selectedComments.filter(id => id !== record.id))
+            }
+          }}
+        />
+      ),
+    },
     {
       title: 'User',
       dataIndex: ['user', 'name'],
@@ -132,13 +191,56 @@ export default function CommentManagementPage() {
             Comment Management
           </Title>
           <Text>Monitor and manage all comments across the platform</Text>
+          
+          <div style={{ marginTop: '16px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <Search
+              placeholder="Search comments..."
+              onChange={e => setSearchText(e.target.value)}
+              style={{ width: 300 }}
+            />
+            <Select
+              defaultValue="all"
+              style={{ width: 120 }}
+              onChange={value => setFilterStatus(value)}
+              options={[
+                { value: 'all', label: 'All Status' },
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'APPROVED', label: 'Approved' },
+                { value: 'REJECTED', label: 'Rejected' },
+              ]}
+            />
+            {selectedComments.length > 0 && (
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'approve', label: 'Approve Selected' },
+                    { key: 'reject', label: 'Reject Selected' },
+                    { key: 'delete', label: 'Delete Selected' },
+                  ],
+                  onClick: ({ key }) => handleBulkAction(key),
+                }}
+              >
+                <Button type="primary">
+                  Bulk Actions ({selectedComments.length})
+                </Button>
+              </Dropdown>
+            )}
+          </div>
         </div>
 
         <Table
-          dataSource={comments}
+          dataSource={filteredComments}
           columns={columns}
           rowKey="id"
           pagination={{ pageSize: 10 }}
+          onChange={(pagination, filters, sorter: any) => {
+            setSortField(sorter.field || 'createdAt')
+            setSortOrder(sorter.order || 'descend')
+          }}
+          rowSelection={{
+            selectedRowKeys: selectedComments,
+            onChange: (selectedRowKeys) => setSelectedComments(selectedRowKeys as string[]),
+          }}
         />
 
         <Modal

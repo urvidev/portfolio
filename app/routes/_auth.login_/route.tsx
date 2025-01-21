@@ -34,6 +34,7 @@ export default function LoginPage() {
     EmailSignin: 'Check your email address.',
     CredentialsSignin:
       'Sign in failed. Check the details you provided are correct.',
+    NotAdmin: 'Access denied. This login is restricted to admin users only.',
     default: 'Unable to sign in.',
   }[errorKey ?? 'default']
 
@@ -48,10 +49,13 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await login({ email: values.email, password: values.password })
+      const response = await login({ email: values.email, password: values.password })
+      if ('error' in response && response.error === 'NotAdmin') {
+        window.location.href = '/login?error=NotAdmin'
+        return
+      }
     } catch (error) {
       console.error(`Could not login: ${error.message}`, { variant: 'error' })
-
       setLoading(false)
     }
   }
@@ -119,17 +123,6 @@ export default function LoginPage() {
         </Form>
 
         <AuthenticationClient.SocialButtons />
-
-        <Button
-          ghost
-          style={{ border: 'none' }}
-          onClick={() => router('/register')}
-        >
-          <Flex gap={'small'} justify="center">
-            <Typography.Text type="secondary">No account?</Typography.Text>{' '}
-            <Typography.Text>Sign up</Typography.Text>
-          </Flex>
-        </Button>
       </Flex>
     </Flex>
   )

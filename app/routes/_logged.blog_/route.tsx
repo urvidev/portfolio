@@ -24,16 +24,14 @@ type PostWithRelations = Prisma.SocialNetworkItemGetPayload<{
     }
   }
 }>
-import { useUserContext } from '@/core/context'
 import dayjs from 'dayjs'
-import { useLocation, useNavigate, useParams } from '@remix-run/react'
-import { useUploadPublic } from '@/plugins/upload/client'
+import { useNavigate } from '@remix-run/react'
 import { Api } from '@/core/trpc'
 import { PageLayout } from '@/designSystem'
 
 export default function BlogPage() {
   const navigate = useNavigate()
-  const { user, isLoggedIn } = useUserContext()
+  const [guestName, setGuestName] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [commentModalVisible, setCommentModalVisible] = useState(false)
   const [selectedPost, setSelectedPost] = useState<string>('')
@@ -66,13 +64,13 @@ export default function BlogPage() {
   }
 
   const handleCommentSubmit = async (values: { content: string }) => {
-    if (!user?.id || !selectedPost) return
+    if (!selectedPost) return
 
     try {
       await createComment({
         data: {
           content: values.content,
-          userId: user.id,
+          guestName: guestName || 'Anonymous',
           itemId: selectedPost,
         },
       })
@@ -131,18 +129,16 @@ export default function BlogPage() {
                     <i className="las la-comments"></i>
                     {post.comments?.length || 0} Comments
                   </Space>,
-                  isLoggedIn && (
-                    <Button
-                      key="add-comment"
-                      type="link"
-                      onClick={() => {
-                        setSelectedPost(post.id)
-                        setCommentModalVisible(true)
-                      }}
-                    >
-                      <i className="las la-plus"></i> Add Comment
-                    </Button>
-                  ),
+                  <Button
+                    key="add-comment"
+                    type="link"
+                    onClick={() => {
+                      setSelectedPost(post.id)
+                      setCommentModalVisible(true)
+                    }}
+                  >
+                    <i className="las la-plus"></i> Add Comment
+                  </Button>,
                 ].filter(Boolean)}
               >
                 <Card.Meta
@@ -184,6 +180,15 @@ export default function BlogPage() {
           footer={null}
         >
           <Form form={form} onFinish={handleCommentSubmit}>
+            <Form.Item
+              name="guestName"
+              rules={[{ required: false }]}
+            >
+              <Input
+                placeholder="Your name (optional)"
+                onChange={(e) => setGuestName(e.target.value)}
+              />
+            </Form.Item>
             <Form.Item
               name="content"
               rules={[{ required: true, message: 'Please enter your comment' }]}
